@@ -428,8 +428,9 @@ function cosineSimilarity(a, b) {
     return Math.max(0, Math.min(1, dot)); // clamp to [0,1]
 }
 
-// Ensure uploads directory exists before using multer
-const uploadsDir = path.join(__dirname, 'uploads');
+// Ensure uploads directory exists before using multer (configurable via env)
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+
 try {
     if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -481,8 +482,9 @@ const upload = multer({
     }
 });
 
-// Initialize SQLite database
-const dbPath = path.join(__dirname, 'cvs.db');
+// Initialize SQLite database (configurable via env)
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'cvs.db');
+
 console.log(`📊 Database path: ${dbPath}`);
 
 const db = new sqlite3.Database(dbPath, (err) => {
