@@ -2,11 +2,11 @@
   "name": "cv-parser-pro-backend",
   "version": "1.0.0",
   "description": "Backend server for CV Parser Pro with Gemini AI integration",
-  "main": "server.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node app.js",
     "postinstall": "npm rebuild sqlite3 --build-from-source",
-    "dev": "nodemon server.js",
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -39,7 +39,7 @@
     "nodemon": "^3.1.10"
   },
   "engines": {
-    "node": "18.x",
+    "node": ">=16.0.0",
     "npm": ">=8.0.0"
   }
 }

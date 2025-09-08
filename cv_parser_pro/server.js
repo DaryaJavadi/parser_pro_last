@@ -2321,7 +2321,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 Enhanced CV Parser Pro Server - FIXED VERSION');
     console.log(`📍 Server running on port ${PORT}`);
     console.log(`📊 Database: ${dbPath}`);
