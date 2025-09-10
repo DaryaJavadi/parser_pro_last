@@ -309,9 +309,14 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '100mb' })); // Increased limit
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
-app.use(express.static('public'));
+// app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, "../public")));
+
 app.use('/api/', limiter);
 
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public", "index.html"));
+});
 // ================= Embedding utilities (SentenceTransformer-like) =================
 async function getEmbeddingPipeline() {
     if (!embeddingPipeline) {
@@ -1252,6 +1257,9 @@ function cleanupFile(filePath) {
 }
 
 // API Routes
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Hello from API!" });
+});
 
 // Health check with detailed status
 app.get('/api/health', (req, res) => {
