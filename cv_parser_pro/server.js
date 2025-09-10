@@ -489,16 +489,25 @@ const upload = multer({
 });
 
 // Initialize SQLite database (configurable via env)
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'cvs.db');
+const dataDir = path.join('/opt/render/data', 'cv_parser_pro');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const dbPath = path.join(dataDir, 'cvs.db');
+
+const repoDbPath = path.join(__dirname, 'cvs.db');
+if (fs.existsSync(repoDbPath) && !fs.existsSync(dbPath)) {
+    fs.copyFileSync(repoDbPath, dbPath);
+}
 
 console.log(`📊 Database path: ${dbPath}`);
 
+const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('❌ Error opening database:', err);
         process.exit(1);
     }
-    console.log('📊 Connected to SQLite database');
+    console.log('📊 Connected to SQLite database at', dbPath);
 });
 
 // Create tables with enhanced structure
