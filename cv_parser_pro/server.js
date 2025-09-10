@@ -501,7 +501,6 @@ if (fs.existsSync(repoDbPath) && !fs.existsSync(dbPath)) {
 
 console.log(`📊 Database path: ${dbPath}`);
 
-const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('❌ Error opening database:', err);
