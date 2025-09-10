@@ -314,9 +314,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use('/api/', limiter);
 
-const apiRoutes = require('./routes/api'); // doğru path göstər
-app.use('/api', apiRoutes);
-
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -1270,9 +1267,7 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     environment: 'render-server',
-    geminiConfigured: !!process.env.GEMINI_API_KEY,
-    uploadsDirectory: fs.existsSync(uploadsDir),
-    database: 'Connected'
+    geminiConfigured: !!process.env.GEMINI_API_KEY
   });
     
     console.log('🏥 Health check requested:', status);
