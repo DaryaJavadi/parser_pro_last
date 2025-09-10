@@ -313,7 +313,9 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use('/api/', limiter);
-app.use('/api', apiRoutes); 
+
+const apiRoutes = require('./routes/api'); // doğru path göstər
+app.use('/api', apiRoutes);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -1264,13 +1266,14 @@ app.get("/api/hello", (req, res) => {
 
 // Health check with detailed status
 app.get('/api/health', (req, res) => {
-    const status = {
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        geminiConfigured: !!GEMINI_API_KEY,
-        uploadsDirectory: fs.existsSync(uploadsDir),
-        database: 'Connected'
-    };
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: 'render-server',
+    geminiConfigured: !!process.env.GEMINI_API_KEY,
+    uploadsDirectory: fs.existsSync(uploadsDir),
+    database: 'Connected'
+  });
     
     console.log('🏥 Health check requested:', status);
     res.json(status);
