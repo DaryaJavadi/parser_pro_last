@@ -315,9 +315,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use('/api/', limiter);
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 // ================= Embedding utilities (SentenceTransformer-like) =================
 async function getEmbeddingPipeline() {
     if (!embeddingPipeline) {
@@ -2197,7 +2194,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 Enhanced CV Parser Pro Server - FIXED VERSION');
     console.log(`📍 Server running on port ${PORT}`);
-    console.log(`📊 Database: ${dbPath}`);
+    console.log(`📊 Database: PostgreSQL (${process.env.DATABASE_URL ? 'Render Cloud' : 'Local'})`);
     console.log(`🤖 Gemini API: ${GEMINI_API_KEY ? '✅ Configured' : '❌ Not configured'}`);
     console.log(`📁 Uploads directory: ${uploadsDir}`);
     console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
@@ -2228,17 +2225,21 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('  5. Monitor console logs for debugging information');
 });
 
+// Catch-all route for frontend (should be last)
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('\n🛑 Shutting down server...');
-    db.close((err) => {
-        if (err) {
-            console.error('❌ Error closing database:', err.message);
-        } else {
-            console.log('📊 Database connection closed.');
-        }
-        process.exit(0);
-    });
+    try {
+        await closeDatabase();
+        console.log('📊 Database connection closed.');
+    } catch (error) {
+        console.error('❌ Error closing database:', error.message);
+    }
+    process.exit(0);
 });
 
 // Handle uncaught exceptions
