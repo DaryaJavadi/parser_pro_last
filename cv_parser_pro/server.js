@@ -4,7 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const { IntelligentCandidateMatcher } = require('./candidate-matcher');
 const multer = require('multer');
-const sqlite3 = require('sqlite3').verbose();
+const { testConnection, initializeDatabase, saveCVToDatabase, getAllCVsFromDatabase, getCVById, deleteCVById, closeDatabase } = require('./database');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -488,65 +488,26 @@ const upload = multer({
     }
 });
 
-// Initialize SQLite database (configurable via env)
-const dataDir = path.join('/opt/render/data', 'cv_parser_pro');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const dbPath = path.join(dataDir, 'cvs.db');
-
-const repoDbPath = path.join(__dirname, 'cvs.db');
-if (fs.existsSync(repoDbPath) && !fs.existsSync(dbPath)) {
-    fs.copyFileSync(repoDbPath, dbPath);
-}
-
-console.log(`📊 Database path: ${dbPath}`);
-
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('❌ Error opening database:', err);
+// Initialize PostgreSQL database
+async function initDB() {
+    try {
+        console.log('📊 Connecting to PostgreSQL database...');
+        const connected = await testConnection();
+        if (!connected) {
+            console.error('❌ Failed to connect to PostgreSQL database');
+            process.exit(1);
+        }
+        
+        await initializeDatabase();
+        console.log('✅ PostgreSQL database initialized successfully');
+    } catch (error) {
+        console.error('❌ Database initialization error:', error.message);
         process.exit(1);
     }
-    console.log('📊 Connected to SQLite database at', dbPath);
-});
+}
 
-// Create tables with enhanced structure
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS cvs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT NOT NULL,
-        name TEXT,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        linkedin TEXT,
-        github TEXT,
-        website TEXT,
-        professional_specialty TEXT,
-        primary_experience_years REAL,
-        secondary_experience_fields TEXT,
-        total_years_experience REAL,
-        highest_university_degree TEXT,
-        university_name TEXT,
-        courses_completed TEXT,
-        summary TEXT,
-        experience_data TEXT,
-        education_data TEXT,
-        skills_data TEXT,
-        projects_data TEXT,
-        awards_data TEXT,
-        volunteer_work_data TEXT,
-        metadata_data TEXT,
-        original_language TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-        if (err) {
-            console.error('❌ Error creating table:', err);
-        } else {
-            console.log('✅ CVs table ready');
-        }
-    });
-});
+// Initialize database on startup
+initDB();
 
 // Language detection function with Azerbaijani support
 function detectLanguage(text) {
@@ -1147,111 +1108,7 @@ async function parseWithGemini(cvText, isExperience = false) {
     }
 }
 
-// Database operations
-function saveCVToDatabase(cvData) {
-    return new Promise((resolve, reject) => {
-        console.log(`💾 Saving CV to database: ${cvData.name || 'Unknown'}`);
-        
-        const stmt = db.prepare(`
-            INSERT INTO cvs (
-                filename, name, email, phone, address, linkedin, github, website,
-                professional_specialty, primary_experience_years, secondary_experience_fields,
-                total_years_experience, highest_university_degree, university_name,
-                courses_completed, summary, experience_data, education_data, skills_data,
-                projects_data, awards_data, volunteer_work_data, metadata_data, original_language
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        stmt.run(
-            cvData.metadata?.filename || 'Unknown',
-            cvData.name,
-            cvData.email,
-            cvData.phone,
-            cvData.address,
-            cvData.linkedin,
-            cvData.github,
-            cvData.website,
-            cvData.professional_specialty,
-            cvData.primary_experience_years || 0,
-            JSON.stringify(cvData.secondary_experience_fields || {}),
-            cvData.total_years_experience || 0,
-            cvData.highest_university_degree,
-            cvData.university_name,
-            JSON.stringify(cvData.courses_completed || []),
-            cvData.summary,
-            JSON.stringify(cvData.experience || []),
-            JSON.stringify(cvData.education || []),
-            JSON.stringify(cvData.skills || {}),
-            JSON.stringify(cvData.projects || []),
-            JSON.stringify(cvData.awards || []),
-            JSON.stringify(cvData.volunteer_work || []),
-            JSON.stringify(cvData.metadata || {}),
-            cvData.original_language || 'English',
-            function(err) {
-                if (err) {
-                    console.error('❌ Database save error:', err.message);
-                    reject(err);
-                } else {
-                    console.log(`✅ CV saved to database with ID: ${this.lastID}`);
-                    resolve(this.lastID);
-                }
-            }
-        );
-        
-        stmt.finalize();
-    });
-}
-
-function getAllCVsFromDatabase() {
-    return new Promise((resolve, reject) => {
-        db.all("SELECT * FROM cvs ORDER BY created_at DESC", (err, rows) => {
-            if (err) {
-                console.error('❌ Database query error:', err.message);
-                reject(err);
-            } else {
-                console.log(`📊 Retrieved ${rows.length} CVs from database`);
-                const cvs = rows.map(row => {
-                    try {
-                        return {
-                            id: row.id,
-                            filename: row.filename,
-                            name: row.name,
-                            email: row.email,
-                            phone: row.phone,
-                            address: row.address,
-                            linkedin: row.linkedin,
-                            github: row.github,
-                            website: row.website,
-                            professional_specialty: row.professional_specialty,
-                            primary_experience_years: row.primary_experience_years || 0,
-                            secondary_experience_fields: JSON.parse(row.secondary_experience_fields || '{}'),
-                            total_years_experience: row.total_years_experience || 0,
-                            highest_university_degree: row.highest_university_degree,
-                            university_name: row.university_name,
-                            courses_completed: JSON.parse(row.courses_completed || '[]'),
-                            summary: row.summary,
-                            experience: JSON.parse(row.experience_data || '[]'),
-                            education: JSON.parse(row.education_data || '[]'),
-                            skills: JSON.parse(row.skills_data || '{}'),
-                            projects: JSON.parse(row.projects_data || '[]'),
-                            awards: JSON.parse(row.awards_data || '[]'),
-                            volunteer_work: JSON.parse(row.volunteer_work_data || '[]'),
-                            original_language: row.original_language || 'English',
-                            metadata: JSON.parse(row.metadata_data || '{}'),
-                            created_at: row.created_at,
-                            updated_at: row.updated_at
-                        };
-                    } catch (parseError) {
-                        console.error(`❌ Error parsing CV data for ID ${row.id}:`, parseError.message);
-                        return null;
-                    }
-                }).filter(cv => cv !== null);
-                
-                resolve(cvs);
-            }
-        });
-    });
-}
+// Database operations are now handled by the database.js module
 
 // Utility function to clean up uploaded files
 function cleanupFile(filePath) {
