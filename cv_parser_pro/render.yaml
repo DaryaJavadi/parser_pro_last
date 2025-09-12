@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cv-parser-pro
+    env: node
+    plan: free
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: node app.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RENDER
+        value: "true"
+      - key: PORT
+        fromService:
+          type: web
+          name: cv-parser-pro
+          property: port

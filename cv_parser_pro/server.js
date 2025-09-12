@@ -924,7 +924,9 @@ async function extractLinksWithPython(filePath) {
     return new Promise((resolve, reject) => {
         console.log(`🐍 Running Python link extraction on: ${filePath}`);
         
-        const pythonProcess = spawn('python', [
+        // Use python3 for Render deployment
+        const pythonCmd = process.env.RENDER ? 'python3' : (process.platform === 'win32' ? 'python' : 'python3');
+        const pythonProcess = spawn(pythonCmd, [
             path.join(__dirname, 'link_extractor.py'),
             filePath
         ]);
